@@ -1,0 +1,45 @@
+# ---- Keil MDK ----
+firmware/**/Objects/
+firmware/**/Listings/
+firmware/**/DebugConfig/
+firmware/**/*.uvguix.*
+firmware/**/*.uvoptx.bak
+firmware/**/*.bak
+firmware/**/*.hex
+firmware/**/*.bin
+firmware/**/*.axf
+firmware/**/*.map
+firmware/**/*.htm
+firmware/**/*.build_log.htm
+firmware/**/*.dep
+firmware/**/*.crf
+firmware/**/*.o
+firmware/**/*.d
+firmware/**/*.lst
+
+# ---- Maven / Java ----
+server/target/
+*.class
+*.jar
+*.war
+.idea/
+*.iml
+.vscode/
+
+# ---- uni-app / HBuilderX ----
+web/unpackage/
+web/node_modules/
+web/dist/
+
+# ---- 运行期数据 ----
+data/
+*.db
+*.db-journal
+*.log
+
+# ---- 系统 ----
+Thumbs.db
+Desktop.ini
+.DS_Store
+desktop.ini
+~$*
