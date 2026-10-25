@@ -2,31 +2,28 @@
 
 ## 1. 前置条件
 
-| 项 | 要求 |
+| 项 | 本机实际情况 |
 |----|------|
-| Keil MDK | 5.24 及以上（ARMCC v5 或 v6 均可） |
-| 器件包 | `Keil.STM32F1xx_DFP` 2.x |
-| 标准外设库 | STM32F10x_StdPeriph_Lib_V3.5.0 |
+| Keil MDK | **5.21a**，ARM Compiler 5.06 update 3（`F:\UV4\UV4.exe`） |
+| 器件包 | **Keil.STM32F1xx_DFP 2.3.0**（装在 `F:\ARM\PACK`，兼容 5.21a） |
+| CMSIS | ARM.CMSIS 4.5.0（随 Keil 安装） |
+| 标准外设库 | SPL V3.5.0，取自器件包的 `Device/StdPeriph_Driver` |
 | 下载器 | ST-Link V2（SWD） |
-| 目标芯片 | STM32F103C8T6 |
+| 目标芯片 | STM32F103C8T6（中容量，64 KB Flash / 20 KB RAM） |
 
-## 2. 重要：路径不能含中文
+> 用户口中的“STM32F108”不是真实型号；器件选择必须是 **STM32F103C8**。
 
-Keil 对非 ASCII 路径支持不稳定，常见症状是「找不到源文件」「生成的 hex 为空」
-「编译器无输出」。当前仓库位于 `F:\毕设\JF-202319121206`，**含中文目录**。
+## 2. 路径说明
 
-正式编译前，把整个仓库复制到纯英文路径，例如：
+当前仓库位于 `F:\毕设\JF-202319121206`，路径含中文。2026-10-25 已在本机用
+Keil 5.21a 直接编译通过。若换机后出现「找不到源文件」「hex 为空」等异常，
+再把仓库复制到纯英文路径（如 `F:\projects\JF-202319121206`）。
 
-```
-F:\projects\JF-202319121206
-```
+## 3. 补充依赖
 
-Git 仓库本身可以留在原处，编译用的副本放在英文路径即可。
-
-## 3. 补充依赖（必须手动完成一次）
-
-本仓库不包含 ST 的标准外设库（体积大、受 ST 许可约束）。按 `Libraries/README.md`
-把 SPL 复制到 `firmware/Libraries/`，否则编译会报：
+本仓库不提交 SPL/CMSIS（已被 `.gitignore` 忽略）。本机已从
+`Keil.STM32F1xx_DFP 2.3.0` 提取并放入 `firmware/Libraries/`。
+换机时按 `Libraries/README.md` 重新放置，否则编译会报：
 
 ```
 cannot open source input file "stm32f10x.h"
@@ -51,19 +48,30 @@ firmware/
 
 ## 5. Keil 工程
 
-本机未安装 Keil，无法预先验证 `.uvprojx`，因此工程文件未预置。
-按 `Project/Keil配置说明.md` 手动创建，约 5 分钟；该文档列出了每个分组要添加的文件
-和全部编译/调试选项。装好 Keil 后如需我生成并验证工程文件，告诉我器件包版本即可。
+工程文件已预置：`firmware/Project/LabManager.uvprojx`，双击即可打开。
+
+2026-10-25 用 Keil MDK 5.21a + ARMCC 5.06u3 实测：
+
+```
+0 Error(s), 2 Warning(s)
+Program Size: Code=11894 RO-data=462 RW-data=124 ZI-data=3500
+```
+
+两条 warning 都来自尚未实现的桩函数（`drv_net.c` 的 `s_rx_cb`、`app_log.c` 的
+`s_tail`），实现对应模块后自然消失。代码量 11.9 KB，**远低于 MDK-Lite 的 32 KB 上限**。
+
+从零重建或换机的步骤见 `Project/Keil配置说明.md`。
 
 ## 6. 编译前检查
 
-- [ ] 工程已放在纯英文路径
-- [ ] `Libraries/` 已按 `Libraries/README.md` 补齐
-- [ ] Define 包含 `USE_STDPERIPH_DRIVER,STM32F10X_MD`
-- [ ] Include Paths 包含 `Core`、`bsp`、`middle`、`protocol`、`app`、
+- [x] 工程文件 `Project/LabManager.uvprojx` 已生成
+- [x] `Libraries/` 已按 `Libraries/README.md` 补齐（本机，git 不提交）
+- [x] Define 包含 `USE_STDPERIPH_DRIVER,STM32F10X_MD`
+- [x] Include Paths 包含 `Core`、`bsp`、`middle`、`protocol`、`app`、
       `Libraries/CMSIS`、`Libraries/STM32F10x_StdPeriph_Driver/inc`
-- [ ] 启动文件为 `startup_stm32f10x_md.s`（中容量）
-- [ ] 外部晶振 8 MHz，系统时钟 72 MHz
+- [x] 启动文件为 `startup_stm32f10x_md.s`（中容量）
+- [x] 外部晶振 8 MHz，`system_stm32f10x.c` 配置为 72 MHz
+- [ ] 实物烧录与分阶段验证（见第 7 节）
 
 ## 7. 分阶段验证顺序
 

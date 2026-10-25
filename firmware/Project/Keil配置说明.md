@@ -1,18 +1,22 @@
 # Keil 工程配置说明
 
 目标：从零创建一个可编译、可下载、可调试的 STM32F103C8T6 工程。
-工程文件未预置（本机未装 Keil，无法验证），按本文操作即可。
+
+**工程文件已预置并实测编译通过**：`firmware/Project/LabManager.uvprojx`。
+本文保留为换机、从零重建或排查配置的参考。
 
 ---
 
 ## 0. 开始前
 
-1. **把仓库放到纯英文路径**，例如 `F:\projects\JF-202319121206`。
-   中文路径会导致 Keil 编译器找不到文件或输出异常。
-2. 安装 Keil MDK 5.24+，安装时勾选 **ARM Compiler**。
-3. 打开 **Pack Installer**，安装 `Keil.STM32F1xx_DFP`（2.x）。
-4. 安装 ST-Link 驱动（Keil 安装包内自带，或 ST 官网下载）。
-5. 按 `firmware/Libraries/README.md` 把 SPL 文件复制到位。
+1. 本机 Keil 安装在 `F:\`：`F:\UV4\UV4.exe`，ARM Compiler 5.06 update 3，
+   许可证为 MDK-Lite（32 KB 代码上限）。
+2. 器件包 `Keil.STM32F1xx_DFP 2.3.0` 已解压到
+   `F:\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0`。不要用 2.4.1：它的 pack schema 是
+   1.7.2，Keil 5.21a 识别不了。
+3. 按 `firmware/Libraries/README.md` 把 SPL/CMSIS 放入 `firmware/Libraries/`。
+   本机已完成，该目录被 git 忽略。
+4. 安装 ST-Link 驱动（Keil 安装目录 `F:\ARM\STLink\` 已自带）。
 
 ---
 
@@ -92,8 +96,13 @@ stm32f10x_usart.c
 
 ### CMSIS
 
+本机使用 ARM.CMSIS 4.5.0，内核函数在 `core_cm3.h` 内联，**不需要 `core_cm3.c`**，
+因此工程中没有 CMSIS 源文件分组。`core_cm3.h` 会包含 `cmsis_armcc.h`，
+所以 `Libraries/CMSIS/` 下必须同时存在：
+
 ```
-firmware/Libraries/CMSIS/core_cm3.c
+core_cm3.h  core_cmFunc.h  core_cmInstr.h  core_cmSimd.h
+cmsis_armcc.h  cmsis_armcc_V6.h  cmsis_gcc.h
 ```
 
 ---
@@ -183,14 +192,16 @@ USE_STDPERIPH_DRIVER,STM32F10X_MD
 
 | 报错 | 原因 | 处理 |
 |------|------|------|
+| `*** Target ... uses RTOS support that is part of a Legacy Pack` | 工程模板继承了 `ArmAdsMisc/mOS=1`（RTX 标志） | 把 `.uvprojx` 中 `mOS` 改为 `0`；本项目不使用 RTOS |
 | `cannot open source input file "stm32f10x.h"` | SPL 未复制或 Include Path 缺 `Libraries/CMSIS` | 按 `Libraries/README.md` 补齐 |
 | `cannot open source input file "core_cm3.h"` | 同上 | 同上 |
+| `cannot open source input file "cmsis_armcc.h"` | CMSIS 头文件只复制了 `core_cm3.h` | 把 `cmsis_armcc.h` 等一并复制到 `Libraries/CMSIS/` |
 | `Undefined symbol SystemInit` | 没把 `system_stm32f10x.c` 加入工程 | 加入 Core 分组 |
 | `Undefined symbol __main` / 启动失败 | 启动文件未加入或选错容量 | 加入 `startup_stm32f10x_md.s` |
 | `L6915E: Library reports error: __use_no_semihosting` | 用了 printf 但未重定向 | 见下方「printf 重定向」 |
 | 下载后无反应 | 启动文件容量选错 / 时钟未起振 | 确认 `md`；检查 8 MHz 晶振 |
 | `No target connected` | SWD 接线或供电 | 检查四线，给板子独立供电 |
-| 编译输出目录为空 | 路径含中文 | 移到英文路径 |
+| 编译输出目录为空 | 路径异常 | 把仓库复制到纯英文路径再试 |
 
 ### printf 重定向（可选）
 
@@ -221,8 +232,9 @@ int fputc(int ch, FILE *f) {
 
 ## 7. 验证清单
 
-- [ ] 0 Error，0 Warning（或仅有 SPL 自身警告）
-- [ ] 生成的 `LabManager.hex` 不为空
+- [x] 0 Error（本机实测：0 Error，2 条桩函数 warning）
+- [x] Code=11894 B，RO=462 B，RW=124 B，ZI=3500 B
+- [x] 生成的 `LabManager.hex` 不为空
 - [ ] ST-Link 能识别芯片
 - [ ] 下载后复位，串口有启动打印
 - [ ] 两个 LED 按预期闪烁
