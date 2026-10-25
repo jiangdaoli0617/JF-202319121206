@@ -17,6 +17,10 @@ firmware/**/*.o
 firmware/**/*.d
 firmware/**/*.lst
 
+# ---- 外部依赖：SPL / CMSIS 按 Libraries/README.md 本地放置，不提交 ----
+firmware/Libraries/CMSIS/
+firmware/Libraries/STM32F10x_StdPeriph_Driver/
+
 # ---- Maven / Java ----
 server/target/
 *.class
