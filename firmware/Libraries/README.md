@@ -9,13 +9,13 @@
 
 | 内容 | 来源路径 |
 |------|---------|
-| 器件头文件 | `F:\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0\Device\Include\` |
+| 器件头文件 | `G:\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0\Device\Include\` |
 | 启动文件 / 系统文件 | `...\Device\Source\ARM\`、`...\Device\Source\` |
 | SPL inc / src | `...\Device\StdPeriph_Driver\` |
-| CMSIS 内核头文件 | `F:\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include\` |
+| CMSIS 内核头文件 | `G:\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include\` |
 
-**版本选择**：必须用 DFP **2.3.0**（pack schema 1.4.0，SPL V3.5.0，兼容 Keil 5.21a）。
-2.4.1 的 schema 是 1.7.2，Keil 5.21a 识别不了。
+**版本**：`G:\ARM\PACK\Keil\STM32F1xx_DFP` 下同时装了 **2.3.0 和 2.4.1**，
+工程使用 2.4.1；本目录的 SPL 头/源文件取自 2.3.0（SPL V3.5.0），两者可混用。
 
 ## 2. 放置后的目录
 
@@ -44,8 +44,8 @@ Libraries/
 ## 3. 复制命令（cmd，管理员权限不需要）
 
 ```bat
-set DFP=F:\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0
-set CMSIS=F:\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include
+set DFP=G:\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0
+set CMSIS=G:\ARM\PACK\ARM\CMSIS\4.5.0\CMSIS\Include
 set LIB=firmware\Libraries
 
 mkdir "%LIB%\CMSIS"
@@ -100,4 +100,4 @@ stm32f10x_usart.c
 |------|------|
 | `cannot open source input file "cmsis_armcc.h"` | `cmsis_*.h` 没复制全，按第 3 节补齐 |
 | `cannot open source input file "stm32f10x.h"` | `stm32f10x.h` 没复制，或 Include Path 缺 `Libraries/CMSIS` |
-| 器件列表里找不到 STM32F103C8 | DFP 版本不对或没装；用 2.3.0，不要 2.4.1 |
+| 器件列表里找不到 STM32F103C8 | DFP 没装或 `RTEPATH` 指错；本机已装 2.3.0/2.4.1 |

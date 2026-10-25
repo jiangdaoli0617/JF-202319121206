@@ -4,20 +4,21 @@
 
 | 项 | 本机实际情况 |
 |----|------|
-| Keil MDK | **5.21a**，ARM Compiler 5.06 update 3（`F:\UV4\UV4.exe`） |
-| 器件包 | **Keil.STM32F1xx_DFP 2.3.0**（装在 `F:\ARM\PACK`，兼容 5.21a） |
+| Keil MDK | **5.21.1**，ARM Compiler 5.06 update 3（`G:\UV4\UV4.exe`） |
+| 器件包 | **Keil.STM32F1xx_DFP 2.4.1**（`G:\ARM\PACK`，2.3.0 也在） |
 | CMSIS | ARM.CMSIS 4.5.0（随 Keil 安装） |
 | 标准外设库 | SPL V3.5.0，取自器件包的 `Device/StdPeriph_Driver` |
 | 下载器 | ST-Link V2（SWD） |
 | 目标芯片 | STM32F103C8T6（中容量，64 KB Flash / 20 KB RAM） |
 
 > 用户口中的“STM32F108”不是真实型号；器件选择必须是 **STM32F103C8**。
+> `F:\UV4` 是同一份 Keil 的拷贝（MD5 与 G: 相同），实际使用以 **G:** 为准。
 
 ## 2. 路径说明
 
-当前仓库位于 `F:\毕设\JF-202319121206`，路径含中文。2026-10-25 已在本机用
-Keil 5.21a 直接编译通过。若换机后出现「找不到源文件」「hex 为空」等异常，
-再把仓库复制到纯英文路径（如 `F:\projects\JF-202319121206`）。
+当前仓库位于 `F:\毕设\JF-202319121206`，路径含中文。2026-10-25 已在
+`G:\UV4` 下直接编译通过，双击 `LabManager.uvprojx` 也能正常打开。
+若换机后出现「找不到源文件」「hex 为空」等异常，再把仓库复制到纯英文路径。
 
 ## 3. 补充依赖
 
@@ -50,15 +51,18 @@ firmware/
 
 工程文件已预置：`firmware/Project/LabManager.uvprojx`，双击即可打开。
 
-2026-10-25 用 Keil MDK 5.21a + ARMCC 5.06u3 实测：
+2026-10-25 用 Keil MDK 5.21.1（`G:\UV4`）+ ARMCC 5.06u3 实测：
 
 ```
 0 Error(s), 2 Warning(s)
-Program Size: Code=11894 RO-data=462 RW-data=124 ZI-data=3500
+Program Size: Code=6104 RO-data=452 RW-data=112 ZI-data=3496
 ```
 
 两条 warning 都来自尚未实现的桩函数（`drv_net.c` 的 `s_rx_cb`、`app_log.c` 的
-`s_tail`），实现对应模块后自然消失。代码量 11.9 KB，**远低于 MDK-Lite 的 32 KB 上限**。
+`s_tail`），实现对应模块后自然消失。代码量 6.1 KB，**远低于 MDK-Lite 的 32 KB 上限**。
+
+> 工程 XML 以本机可正常打开的江协模板为基座生成。**不要**再用新版 pack 自带的
+> Blinky 示例改工程：那种 XML 会让 Keil 5.21 在打开工程时直接崩溃。
 
 从零重建或换机的步骤见 `Project/Keil配置说明.md`。
 

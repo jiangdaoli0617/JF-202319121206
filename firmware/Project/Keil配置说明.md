@@ -9,14 +9,14 @@
 
 ## 0. 开始前
 
-1. 本机 Keil 安装在 `F:\`：`F:\UV4\UV4.exe`，ARM Compiler 5.06 update 3，
-   许可证为 MDK-Lite（32 KB 代码上限）。
-2. 器件包 `Keil.STM32F1xx_DFP 2.3.0` 已解压到
-   `F:\ARM\PACK\Keil\STM32F1xx_DFP\2.3.0`。不要用 2.4.1：它的 pack schema 是
-   1.7.2，Keil 5.21a 识别不了。
+1. 本机实际使用的 Keil 在 `G:\`：`G:\UV4\UV4.exe`，ARM Compiler 5.06 update 3，
+   许可证为 MDK-Lite（32 KB 代码上限）。`F:\UV4` 是同一份拷贝（MD5 相同），
+   以 `G:` 为准。
+2. `G:\ARM\PACK\Keil\STM32F1xx_DFP` 下已安装 **2.3.0 和 2.4.1**；本工程使用
+   **2.4.1**（与江协模板一致）。
 3. 按 `firmware/Libraries/README.md` 把 SPL/CMSIS 放入 `firmware/Libraries/`。
    本机已完成，该目录被 git 忽略。
-4. 安装 ST-Link 驱动（Keil 安装目录 `F:\ARM\STLink\` 已自带）。
+4. 安装 ST-Link 驱动（Keil 安装目录 `G:\ARM\STLink\` 已自带）。
 
 ---
 
@@ -193,6 +193,7 @@ USE_STDPERIPH_DRIVER,STM32F10X_MD
 | 报错 | 原因 | 处理 |
 |------|------|------|
 | `*** Target ... uses RTOS support that is part of a Legacy Pack` | 工程模板继承了 `ArmAdsMisc/mOS=1`（RTX 标志） | 把 `.uvprojx` 中 `mOS` 改为 `0`；本项目不使用 RTOS |
+| 打开工程时 Keil 直接闪退（异常码 `0xc0000005`） | `.uvprojx` 用了新版 pack 示例的 XML 结构，5.21 的 GUI 解析崩溃 | 用江协模板的 5.21 兼容结构重建；本项目已处理，不要再从 Blinky 示例改工程 |
 | `cannot open source input file "stm32f10x.h"` | SPL 未复制或 Include Path 缺 `Libraries/CMSIS` | 按 `Libraries/README.md` 补齐 |
 | `cannot open source input file "core_cm3.h"` | 同上 | 同上 |
 | `cannot open source input file "cmsis_armcc.h"` | CMSIS 头文件只复制了 `core_cm3.h` | 把 `cmsis_armcc.h` 等一并复制到 `Libraries/CMSIS/` |
@@ -233,7 +234,7 @@ int fputc(int ch, FILE *f) {
 ## 7. 验证清单
 
 - [x] 0 Error（本机实测：0 Error，2 条桩函数 warning）
-- [x] Code=11894 B，RO=462 B，RW=124 B，ZI=3500 B
+- [x] Code=6104 B，RO=452 B，RW=112 B，ZI=3496 B
 - [x] 生成的 `LabManager.hex` 不为空
 - [ ] ST-Link 能识别芯片
 - [ ] 下载后复位，串口有启动打印
