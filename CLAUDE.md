@@ -83,7 +83,11 @@ docs/                ← 设计文档（需求、架构、硬件、模块、规�
 - 已完成：工程骨架 + Keil 工程；模块 1 延时与 GPIO；模块 2 OLED 驱动（`bsp_oled.c` / `bsp_oled_font.h`）
 - 汉字 16×16 字库目前是占位模板，需用 PCtoLCD2002 取模后填入
 - 下一步：模块 3 按键 + 蜂鸣器
-- `firmware/Libraries/`（CMSIS + 标准库）需在每台机器本地放置，来源见 `firmware/Libraries/README.md`
+- 工位端 `firmware/Libraries/` 已就位（SPL V3.5.0 + CMSIS 1.30 风格），器件包 `Keil.STM32F1xx_DFP.2.2.0.pack` 尚待安装
+- 工位端未装 JDK / Maven，暂时做不了 Java 上位机
+
+**环境清单、两台电脑各自的状态、换机器检查清单、已知的坑，全部见
+`docs/08-环境搭建与两台电脑协作手册.md`。动手前先读那份。**
 
 ## 参考资料注意事项
 
