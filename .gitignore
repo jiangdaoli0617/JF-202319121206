@@ -2,6 +2,7 @@
 firmware/**/Objects/
 firmware/**/Listings/
 firmware/**/DebugConfig/
+firmware/Project/RTE/
 firmware/**/*.uvguix.*
 firmware/**/*.uvoptx.bak
 firmware/**/*.bak
