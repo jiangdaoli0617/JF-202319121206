@@ -80,7 +80,7 @@ Program Size: Code=11894 RO-data=462 RW-data=124 ZI-data=3500
 | 阶段 | 内容 | 通过标准 |
 |------|------|---------|
 | 1 | GPIO | 两个 LED 交替闪烁，蜂鸣器可控 |
-| 2 | USART1 | 串口助手收到 `[BOOT] LabManager` |
+| 2 | USART2 | 串口助手收到 `[BOOT] LabManager` |
 | 3 | I2C 扫描 | 收到 `0x50 / 0x68 / 0x3C` 三个地址 |
 | 4 | OLED | 能显示四行文字 |
 | 5 | RC522 | 串口打印卡片 UID |

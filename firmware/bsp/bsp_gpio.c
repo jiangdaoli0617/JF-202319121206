@@ -2,7 +2,7 @@
 #include "board_config.h"
 
 static const uint16_t s_key_pins[KEY_COUNT] = {
-    KEY1_PIN, KEY2_PIN, KEY3_PIN, KEY4_PIN
+    KEY1_PIN, KEY2_PIN, KEY3_PIN, KEY4_PIN, KEY5_PIN
 };
 
 static void set_output(GPIO_TypeDef *port, uint16_t pin,
@@ -23,7 +23,7 @@ void bsp_gpio_init(void) {
                            RCC_APB2Periph_AFIO, ENABLE);
 
     /* 按键：上拉输入，按下为低 */
-    gpio.GPIO_Pin   = KEY1_PIN | KEY2_PIN | KEY3_PIN | KEY4_PIN;
+    gpio.GPIO_Pin   = KEY1_PIN | KEY2_PIN | KEY3_PIN | KEY4_PIN | KEY5_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_IPU;
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(KEY_PORT, &gpio);

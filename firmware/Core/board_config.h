@@ -12,22 +12,23 @@
 /* ---------- 系统滴答（stm32f10x_it.c 中定义） ---------- */
 extern volatile uint32_t g_sys_tick_ms;
 
-/* ---------- 调试串口 USART1 ---------- */
-#define DBG_USART             USART1
+/* ---------- 调试串口 USART2：接 USB-TTL，看 printf 输出 ---------- */
+#define DBG_USART             USART2
 #define DBG_USART_BAUD        115200
 #define DBG_TX_PORT           GPIOA
-#define DBG_TX_PIN            GPIO_Pin_9
+#define DBG_TX_PIN            GPIO_Pin_2
 #define DBG_RX_PORT           GPIOA
-#define DBG_RX_PIN            GPIO_Pin_10
+#define DBG_RX_PIN            GPIO_Pin_3
 
-/* ---------- WiFi 串口 USART2（ESP8266-01S） ---------- */
-/* 注意：CH_PD 由外部 10k 上拉到 3.3V，不由 MCU 控制 */
-#define WIFI_USART            USART2
+/* ---------- WiFi 串口 USART1（ESP8266-01S） ---------- */
+/* 交叉接线：STM32 的 TX 接 ESP 的 RX，STM32 的 RX 接 ESP 的 TX。
+ * 注意：CH_PD 由外部 10k 上拉到 3.3V，不由 MCU 控制 */
+#define WIFI_USART            USART1
 #define WIFI_USART_BAUD       115200
 #define WIFI_TX_PORT          GPIOA
-#define WIFI_TX_PIN           GPIO_Pin_2
+#define WIFI_TX_PIN           GPIO_Pin_9
 #define WIFI_RX_PORT          GPIOA
-#define WIFI_RX_PIN           GPIO_Pin_3
+#define WIFI_RX_PIN           GPIO_Pin_10
 
 /* ---------- RC522 SPI1 ---------- */
 #define RC522_SPI             SPI1
@@ -45,27 +46,35 @@ extern volatile uint32_t g_sys_tick_ms;
 /* 72 MHz / 64 = 1.125 MHz，RC522 上限 10 MHz，留足余量 */
 #define RC522_SPI_PRESCALER   SPI_BaudRatePrescaler_64
 
-/* ---------- I2C1：DS3231 / AT24C02 / SSD1306 ---------- */
-#define I2C_BUS               I2C1
+/* ---------- 软件模拟 I2C：DS3231 / AT24C02 / SSD1306 ---------- */
+/* 三个器件挂在同一组 SCL/SDA 上，靠器件地址区分，互不冲突。
+ * 不使用 F103 自带的硬件 I2C 外设：标准库下容易出现总线死锁、需要反复复位；
+ * 软件模拟用普通 GPIO 加微秒延时手工产生时序，完全可控，也便于答辩讲原理。 */
 #define I2C_SCL_PORT          GPIOB
 #define I2C_SCL_PIN           GPIO_Pin_6
 #define I2C_SDA_PORT          GPIOB
 #define I2C_SDA_PIN           GPIO_Pin_7
 
-/* 400 kHz 为标准模式上限；排线较长或通信不稳时改为 100000 */
-#define I2C_CLOCK_SPEED       400000
+/* 半周期延时(us)：5us → SCL 周期 10us → 约 100kHz，标准模式，排线较长时也稳。
+ * 调小可提速，但不要低于 2us（对应约 250kHz）。 */
+#define I2C_DELAY_US          5U
 
-#define DS3231_ADDR           0x68
-#define AT24C02_ADDR          0x50
-#define OLED_ADDR             0x3C
+/* 器件地址用 7 位形式，底层发送时左移一位再补读写位；
+ * 括号内是开题报告中写法的 8 位写地址，两者是同一器件。 */
+#define DS3231_ADDR           0x68      /* 8 位写地址 0xD0 */
+#define AT24C02_ADDR          0x50      /* 8 位写地址 0xA0 */
+#define OLED_ADDR             0x3C      /* 8 位写地址 0x78 */
 
-/* ---------- 按键 K1~K4 ---------- */
+/* ---------- 按键 K1~K5 ---------- */
+/* 上拉输入，按下接地；5 个键分别对应
+ * 登记 / 借出 / 归还 / 上一条记录 / 下一条记录 */
 #define KEY_PORT              GPIOB
-#define KEY1_PIN              GPIO_Pin_12
-#define KEY2_PIN              GPIO_Pin_13
-#define KEY3_PIN              GPIO_Pin_14
-#define KEY4_PIN              GPIO_Pin_15
-#define KEY_COUNT             4
+#define KEY1_PIN              GPIO_Pin_11     /* 物品登记 */
+#define KEY2_PIN              GPIO_Pin_12     /* 借出 */
+#define KEY3_PIN              GPIO_Pin_13     /* 归还 */
+#define KEY4_PIN              GPIO_Pin_14     /* 上一条记录 */
+#define KEY5_PIN              GPIO_Pin_15     /* 下一条记录 */
+#define KEY_COUNT             5
 
 /* ---------- 蜂鸣器与 LED ---------- */
 #define BEEP_PORT             GPIOB
