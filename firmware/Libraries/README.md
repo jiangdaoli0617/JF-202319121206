@@ -13,17 +13,16 @@
 
 | 内容 | 来源路径 |
 |------|---------|
-| 器件头文件 | `<PACK>\Keil\STM32F1xx_DFP\2.3.0\Device\Include\` |
+| 器件头文件 | `<PACK>\Keil\STM32F1xx_DFP\2.2.0\Device\Include\` |
 | 启动文件 / 系统文件 | `...\Device\Source\ARM\`、`...\Device\Source\` |
 | SPL inc / src | `...\Device\StdPeriph_Driver\` |
-| CMSIS 内核头文件 | `<PACK>\ARM\CMSIS\4.5.0\CMSIS\Include\` |
+| CMSIS 内核头文件 | `<PACK>\ARM\CMSIS\4.5.0\CMSIS\Include\`（新 Keil 也可是 `5.0.1`） |
 
-**版本要求**：DFP 用 **2.3.0**（pack schema 1.4.0，配套 SPL V3.5.0，兼容 Keil 5.21a）。
-2.4.1 的 schema 是 1.7.2，Keil 5.21a 识别不了。
+**版本要求**：两台电脑统一用 **DFP 2.2.0**，配套 **Keil 5.24a**。
+工程文件写的就是 2.2.0；不要再装/选 2.4.1。
 
-> 用户电脑上 `<PACK>` = `G:\ARM\PACK`，已装 DFP 2.1.0 / 2.3.0 / 2.4.1。
-> Keil 5.21 打开 STM32F103C8 工程时会被 PDSC 调试描述搞崩，工程实际用
-> **ARMCM3** 器件规避，详见 `firmware/Project/Keil配置说明.md`。
+> 用户电脑上 `<PACK>` = `G:\Keil_v5\ARM\PACK`，DFP 2.2.0 已装。
+> 之前 5.21a + 新版 DFP 打开 STM32F103C8 工程会闪退，已改用 5.24a。
 
 这条路线用的是 **CMSIS 4.x** 风格，`core_cm3.h` 会包含 `cmsis_armcc.h`，
 所以 `cmsis_*.h` 必须一起复制：
@@ -46,7 +45,7 @@ Libraries/CMSIS/
 复制命令（cmd）：
 
 ```bat
-set DFP=<PACK>\Keil\STM32F1xx_DFP\2.3.0
+set DFP=<PACK>\Keil\STM32F1xx_DFP\2.2.0
 set CMSIS=<PACK>\ARM\CMSIS\4.5.0\CMSIS\Include
 set LIB=firmware\Libraries
 
@@ -144,5 +143,5 @@ stm32f10x_usart.c
 |------|------|
 | `cannot open source input file "cmsis_armcc.h"` | 用了路线 A 的 `core_cm3.h` 却没复制 `cmsis_*.h`；要么补齐，要么改用路线 B |
 | `cannot open source input file "stm32f10x.h"` | 文件没复制，或 Include Path 缺 `Libraries/CMSIS` |
-| 器件列表里找不到 STM32F103C8 | 器件包（DFP）没装。资料包里有 `Keil.STM32F1xx_DFP.2.2.0.pack`，双击安装 |
+| 器件列表里找不到 STM32F103C8 | 器件包（DFP）没装。用 `江协科技\Keil5 MDK\支持包\Keil.STM32F1xx_DFP.2.2.0.pack` 双击安装 |
 | 编译报 `core_cm3.h` 未定义符号 | 路线 A/B 混用了：`core_cm3.h` 与 `cmsis_*.h` 必须来自同一套 |

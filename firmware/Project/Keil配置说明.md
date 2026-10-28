@@ -9,14 +9,14 @@
 
 ## 0. 开始前
 
-1. 本机实际使用的 Keil 在 `G:\`：`G:\UV4\UV4.exe`，ARM Compiler 5.06 update 3，
-   许可证为 MDK-Lite（32 KB 代码上限）。`F:\UV4` 是同一份拷贝（MD5 相同），
-   以 `G:` 为准。
-2. `G:\ARM\PACK\Keil\STM32F1xx_DFP` 下已安装 **2.3.0 和 2.4.1**；本工程使用
-   **2.4.1**（与江协模板一致）。
+1. 本机使用 **Keil 5.24a**：`G:\Keil_v5\UV4\UV4.exe`，ARM Compiler 5.06 update 5，
+   许可证为 MDK-Lite（32 KB 代码上限）。旧 `G:\UV4`（5.21a）打开 STM32F103C8
+   工程会 3~7 秒闪退，**不要再用**。
+2. 器件包 **DFP 2.2.0** 已安装在
+   `G:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0`。
 3. 按 `firmware/Libraries/README.md` 把 SPL/CMSIS 放入 `firmware/Libraries/`。
    本机已完成，该目录被 git 忽略。
-4. 安装 ST-Link 驱动（Keil 安装目录 `G:\ARM\STLink\` 已自带）。
+4. 安装 ST-Link 驱动（Keil 安装目录 `G:\Keil_v5\ARM\STLink\` 已自带）。
 
 ---
 
@@ -164,8 +164,8 @@ USE_STDPERIPH_DRIVER,STM32F10X_MD
 2. 点 `Settings`：
    - `Debug` 选项卡：`Port` 选 `SW`，`Max Clock` 保持默认。
    - `Flash Download` 选项卡：勾选 `Reset and Run`；
-     确认 Programming Algorithm 中有
-     `STM32F10x Med-density Flash 64KB`，没有则点 `Add` 添加。
+     确认 Programming Algorithm 中有 `STM32F10x_128.FLM`。没有则点 `Add`，选择
+     `G:\Keil_v5\ARM\PACK\Keil\STM32F1xx_DFP\2.2.0\Flash\STM32F10x_128.FLM`。
 3. 若下载报 `No target connected`：检查 SWDIO/SWCLK/GND/3.3V 四根线，
    并确认板子已上电。
 
@@ -193,7 +193,8 @@ USE_STDPERIPH_DRIVER,STM32F10X_MD
 | 报错 | 原因 | 处理 |
 |------|------|------|
 | `*** Target ... uses RTOS support that is part of a Legacy Pack` | 工程模板继承了 `ArmAdsMisc/mOS=1`（RTX 标志） | 把 `.uvprojx` 中 `mOS` 改为 `0`；本项目不使用 RTOS |
-| 打开工程时 Keil 直接闪退（异常码 `0xc0000005`） | `.uvprojx` 用了新版 pack 示例的 XML 结构，5.21 的 GUI 解析崩溃 | 用江协模板的 5.21 兼容结构重建；本项目已处理，不要再从 Blinky 示例改工程 |
+| 打开工程 3~7 秒闪退 / `Loading PDSC Debug Description failed` | Keil 5.21a 解析 STM32F1 DFP 调试描述的 bug，中文路径更易触发 | 升级到 **Keil 5.24a + DFP 2.2.0**；工程固定 2.2.0，不要退回 5.21a |
+| 打开工程时 Keil 直接闪退（异常码 `0xc0000005`） | `.uvprojx` 用了新版 pack 示例的 XML 结构，旧版 GUI 解析崩溃 | 用江协模板的兼容结构重建；本项目已处理，不要再从 Blinky 示例改工程 |
 | `cannot open source input file "stm32f10x.h"` | SPL 未复制或 Include Path 缺 `Libraries/CMSIS` | 按 `Libraries/README.md` 补齐 |
 | `cannot open source input file "core_cm3.h"` | 同上 | 同上 |
 | `cannot open source input file "cmsis_armcc.h"` | CMSIS 头文件只复制了 `core_cm3.h` | 把 `cmsis_armcc.h` 等一并复制到 `Libraries/CMSIS/` |
@@ -233,8 +234,8 @@ int fputc(int ch, FILE *f) {
 
 ## 7. 验证清单
 
-- [x] 0 Error（本机实测：0 Error，2 条桩函数 warning）
-- [x] Code=6104 B，RO=452 B，RW=112 B，ZI=3496 B
+- [x] 0 Error（3 条警告：`oled_write_cmd`、`s_rx_cb`、`s_tail` 未使用）
+- [x] Code=6196 B，RO=2048 B，RW=116 B，ZI=4524 B
 - [x] 生成的 `LabManager.hex` 不为空
 - [ ] ST-Link 能识别芯片
 - [ ] 下载后复位，串口有启动打印
