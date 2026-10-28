@@ -2,6 +2,7 @@
 firmware/**/Objects/
 firmware/**/Listings/
 firmware/**/DebugConfig/
+firmware/Project/RTE/
 firmware/**/*.uvguix.*
 firmware/**/*.uvoptx.bak
 firmware/**/*.bak
@@ -20,6 +21,9 @@ firmware/**/*.lst
 # ---- 外部依赖：SPL / CMSIS 按 Libraries/README.md 本地放置，不提交 ----
 firmware/Libraries/CMSIS/
 firmware/Libraries/STM32F10x_StdPeriph_Driver/
+
+# ---- 参考资料：江协科技教程包（3.2 GB），仅本地查看，不提交 ----
+江协科技/
 
 # ---- Maven / Java ----
 server/target/

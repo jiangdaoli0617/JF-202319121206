@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 typedef enum {
-    USART_PORT_DEBUG = 1,   /* USART1：PA9/PA10，接串口助手 */
-    USART_PORT_WIFI  = 2    /* USART2：PA2/PA3，接 ESP8266 */
+    USART_PORT_DEBUG = 1,   /* USART2：PA2/PA3，接串口助手 */
+    USART_PORT_WIFI  = 2    /* USART1：PA9/PA10，接 ESP8266 */
 } usart_port_t;
 
 void     bsp_usart_init(void);
