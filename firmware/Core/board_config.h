@@ -80,6 +80,13 @@ extern volatile uint32_t g_sys_tick_ms;
 #define BEEP_PORT             GPIOB
 #define BEEP_PIN              GPIO_Pin_8
 
+/* 蜂鸣器触发极性：
+ *   0 = 低电平鸣叫 —— 江协那套 3 脚有源蜂鸣器模块（板上自带三极管），
+ *                     I/O 接 PB8，VCC 接 3.3V，GND 接 GND，不需要外接电阻
+ *   1 = 高电平鸣叫 —— 自己用 S8050 三极管搭的驱动电路（基极串 1kΩ）
+ * 接反了只会表现为「该响时不响、不响时一直响」，改这一个数字即可。 */
+#define BEEP_ON_LEVEL         0
+
 #define LED_GREEN_PORT        GPIOB
 #define LED_GREEN_PIN         GPIO_Pin_9
 

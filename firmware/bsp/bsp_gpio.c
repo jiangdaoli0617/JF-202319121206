@@ -28,12 +28,12 @@ void bsp_gpio_init(void) {
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(KEY_PORT, &gpio);
 
-    /* 蜂鸣器：推挽输出，默认关闭 */
+    /* 蜂鸣器：推挽输出，默认静音（静音电平由 BEEP_ON_LEVEL 决定） */
     gpio.GPIO_Pin   = BEEP_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_Out_PP;
     gpio.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(BEEP_PORT, &gpio);
-    GPIO_ResetBits(BEEP_PORT, BEEP_PIN);
+    set_output(BEEP_PORT, BEEP_PIN, 0U, BEEP_ON_LEVEL);
 
     /* LED：推挽输出，默认熄灭 */
     gpio.GPIO_Pin = LED_GREEN_PIN;
@@ -62,9 +62,5 @@ void bsp_led_red(uint8_t on) {
 }
 
 void bsp_beep(uint8_t on) {
-    if (on) {
-        GPIO_SetBits(BEEP_PORT, BEEP_PIN);
-    } else {
-        GPIO_ResetBits(BEEP_PORT, BEEP_PIN);
-    }
+    set_output(BEEP_PORT, BEEP_PIN, on, BEEP_ON_LEVEL);
 }
