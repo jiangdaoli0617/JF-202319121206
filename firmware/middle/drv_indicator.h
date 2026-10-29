@@ -9,6 +9,7 @@ typedef enum {
     IND_UNKNOWN_CARD,    /* 未授权卡：红长亮 + 长鸣 */
     IND_ERROR,           /* 内部异常：红快闪 + 急促鸣 */
     IND_NET_DOWN,        /* 断网：红慢闪，无声音，循环 */
+    IND_KEY,             /* 按键确认：短鸣一声，无灯光 */
     IND_IDLE             /* 清除所有指示 */
 } ind_event_t;
 

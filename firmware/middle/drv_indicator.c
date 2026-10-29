@@ -50,12 +50,19 @@ static const ind_step_t P_NET_DOWN[] = {
     {0U, 0U, 0U, 0U}
 };
 
+/* 按键确认：只短鸣 60 ms，不亮灯 */
+static const ind_step_t P_KEY[] = {
+    {0U, 0U, 1U, 60U},
+    {0U, 0U, 0U, 0U}
+};
+
 static const ind_pattern_t s_patterns[] = {
     {P_LEND_OK,  0U},
     {P_REJECT,   0U},
     {P_UNKNOWN,  0U},
     {P_ERROR,    0U},
-    {P_NET_DOWN, 1U}
+    {P_NET_DOWN, 1U},
+    {P_KEY,      0U}
 };
 
 static const ind_pattern_t *s_pattern = 0;
@@ -74,7 +81,7 @@ void drv_indicator_init(void) {
 }
 
 void drv_indicator_show(ind_event_t ev) {
-    if (ev == IND_IDLE || ev > IND_NET_DOWN) {
+    if (ev >= IND_IDLE) {
         s_pattern = 0;
         apply_step(&STEP_OFF);
         return;
