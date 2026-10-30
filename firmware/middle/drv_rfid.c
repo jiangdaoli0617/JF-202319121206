@@ -7,6 +7,10 @@ void drv_rfid_init(void) {
     bsp_rc522_init();
 }
 
+uint8_t drv_rfid_version(void) {
+    return bsp_rc522_version();
+}
+
 uint8_t drv_rfid_poll(rfid_card_t *card) {
     static uint32_t s_last_uid  = 0U;
     static uint32_t s_last_ms   = 0U;

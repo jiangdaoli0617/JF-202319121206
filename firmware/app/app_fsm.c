@@ -1,125 +1,89 @@
 #include "app_fsm.h"
-#include "drv_input.h"
+#include "drv_rfid.h"
 #include "drv_indicator.h"
-#include "drv_rtc.h"
 #include "drv_display.h"
 
 static app_state_t s_state = ST_INIT;
-static uint32_t    s_last_sec = 0U;
 
 /* ============================================================================
- * 模块 5 硬件测试：DS3231 实时时钟
+ * 模块 6 硬件测试：RC522 读卡
  *
- * 上电后 OLED 第 0 行显示 RTC 状态（OK / LOST），第 1、2 行显示当前日期和
- * 时间，每 1 秒刷新一次。按 K1（登记键）把 DS3231 写成下面的固定时间，用来
- * 验证「写时间 → 走时 → 断电保持」三个环节。
+ * 上电先读一次 VersionReg（正常 0x91/0x92）验证 SPI 通路：
+ *   - 读得到 → OLED 显示 RC522 OK，进入读卡轮询；
+ *   - 读不到 → OLED 显示 RC522 ERR，提示检查 SPI 接线，不进入读卡。
+ * 读到卡片后把 4 字节 UID 显示到 OLED 并短鸣一声，换另一张卡会刷新。
  *
- * LOST 表示 DS3231 的状态寄存器 OSF 位为 1：要么是全新芯片没设置过时间，
- * 要么电池没电/刚断过电。按 K1 设置一次后 OSF 会被清除，重新显示 OK。
- *
- * 真正的登记/借出/归还流程要等双卡状态机实现后再替换这里。
+ * 真正的双卡流程（先身份卡、再器材卡）要等状态机实现后再替换这里。
  * ============================================================================ */
 
-/* 验证用初始时间（最终真实校时由上位机下发，不走按键） */
-#define RTC_TEST_YEAR    2026
-#define RTC_TEST_MONTH   10
-#define RTC_TEST_DAY     30
-#define RTC_TEST_HOUR    12
-#define RTC_TEST_MINUTE  0
-#define RTC_TEST_SECOND  0
+static const char s_hex[] = "0123456789ABCDEF";
+static uint8_t s_checked = 0U;   /* 是否已完成上电自检 */
+static uint8_t s_ver_ok  = 0U;   /* 自检结果：1 = SPI 通路正常 */
+static uint8_t s_ver_val = 0U;   /* 自检读到的 VersionReg 原始值，用于诊断 */
 
-/* 把 0~99 的两位十进制数写入 p（带前导零），共写 2 个字符 */
-static void put_two(char *p, uint8_t v) {
-    p[0] = (char)('0' + (v / 10U));
-    p[1] = (char)('0' + (v % 10U));
-}
+/* 把 4 字节 UID 转成 8 位大写十六进制串，如 A1B2C3D4 */
+static void uid_hex_str(char *buf, uint32_t uid) {
+    uint8_t i;
 
-/* 生成日期串 "YYYY-MM-DD"，占 10 个字符 */
-static void rtc_date_str(char *buf, const rtc_time_t *t) {
-    buf[0]  = (char)('0' + ((uint8_t)(t->year / 1000U) % 10U));
-    buf[1]  = (char)('0' + ((uint8_t)(t->year / 100U) % 10U));
-    buf[2]  = (char)('0' + ((uint8_t)(t->year / 10U) % 10U));
-    buf[3]  = (char)('0' + (uint8_t)(t->year % 10U));
-    buf[4]  = '-';
-    put_two(&buf[5], t->month);
-    buf[7]  = '-';
-    put_two(&buf[8], t->day);
-    buf[10] = '\0';
-}
-
-/* 生成时间串 "HH:MM:SS"，占 8 个字符 */
-static void rtc_clock_str(char *buf, const rtc_time_t *t) {
-    put_two(&buf[0], t->hour);
-    buf[2] = ':';
-    put_two(&buf[3], t->minute);
-    buf[5] = ':';
-    put_two(&buf[6], t->second);
+    for (i = 0U; i < 8U; i++) {
+        buf[7U - i] = s_hex[uid & 0x0FU];
+        uid >>= 4U;
+    }
     buf[8] = '\0';
 }
 
-/* 把当前时间画到 OLED */
-static void rtc_show(void) {
-    rtc_time_t t;
-    char date[11];
-    char clock[9];
-
-    drv_rtc_get(&t);
+/* 显示待刷卡画面（含 SPI 自检结果；失败时把版本号原始值显示出来帮助定位） */
+static void rc522_show_idle(void) {
+    char ver[7];
 
     drv_display_clear();
-    if (drv_rtc_is_valid()) {
-        drv_display_line(0U, "DS3231 OK");
+    if (s_ver_ok) {
+        drv_display_line(0U, "RC522 OK");
+        drv_display_line(1U, "Swipe card");
     } else {
-        drv_display_line(0U, "DS3231 LOST");
+        ver[0] = 'V'; ver[1] = 'E'; ver[2] = 'R'; ver[3] = '=';
+        ver[4] = s_hex[s_ver_val >> 4];
+        ver[5] = s_hex[s_ver_val & 0x0FU];
+        ver[6] = '\0';
+        drv_display_line(0U, "RC522 ERR");
+        drv_display_line(1U, ver);
     }
-
-    rtc_date_str(date, &t);
-    rtc_clock_str(clock, &t);
-    drv_display_line(1U, date);
-    drv_display_line(2U, clock);
-    drv_display_line(3U, "K1:Set Time");
     drv_display_refresh();
 }
 
-/* 按 K1 后把时间写成 RTC_TEST_* 定义的固定值 */
-static void rtc_set_default(void) {
-    rtc_time_t t;
+static void rc522_test(void) {
+    rfid_card_t card;
+    char uid[9];
 
-    t.year   = RTC_TEST_YEAR;
-    t.month  = RTC_TEST_MONTH;
-    t.day    = RTC_TEST_DAY;
-    t.hour   = RTC_TEST_HOUR;
-    t.minute = RTC_TEST_MINUTE;
-    t.second = RTC_TEST_SECOND;
-
-    drv_rtc_set(&t);
-}
-
-static void rtc_test(void) {
-    key_id_t key = drv_input_scan();
-    uint32_t now = drv_rtc_now();
-
-    if (key == KEY_K1) {
-        rtc_set_default();
-        drv_indicator_show(IND_KEY);
-        s_last_sec = now;
-        rtc_show();
-        return;
+    /* 第一次进来先自检一次 SPI 通路 */
+    if (!s_checked) {
+        s_ver_val = drv_rfid_version();
+        s_ver_ok  = (s_ver_val == 0x91U || s_ver_val == 0x92U) ? 1U : 0U;
+        s_checked = 1U;
+        rc522_show_idle();
     }
 
-    /* 秒数变化才刷新一次，避免主循环每个 tick 都重画 OLED */
-    if (now != s_last_sec) {
-        s_last_sec = now;
-        rtc_show();
+    if (!s_ver_ok) {
+        return;                     /* SPI 没通，先别轮询读卡 */
+    }
+
+    if (drv_rfid_poll(&card)) {
+        uid_hex_str(uid, card.uid);
+        drv_indicator_show(IND_KEY);
+        drv_display_clear();
+        drv_display_line(0U, "RC522 OK");
+        drv_display_line(1U, "Card UID:");
+        drv_display_line(2U, uid);
+        drv_display_refresh();
     }
 }
 
 void app_fsm_init(void) {
     s_state = ST_IDLE;
-    s_last_sec = 0U;
 }
 
 void app_fsm_run(void) {
-    rtc_test();
+    rc522_test();
 
     /* TODO: 双卡流程
      *   ST_IDLE     → drv_rfid_poll → app_auth_check

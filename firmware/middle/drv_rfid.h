@@ -10,6 +10,8 @@ typedef struct {
 } rfid_card_t;
 
 void    drv_rfid_init(void);
+/* 读 VersionReg 原始值，正常为 0x91/0x92，用于验证 SPI 通路 */
+uint8_t drv_rfid_version(void);
 /* 非阻塞轮询，无卡返回 0。内部含 2 s 同卡去重 */
 uint8_t drv_rfid_poll(rfid_card_t *card);
 void    drv_rfid_antenna(uint8_t on);
