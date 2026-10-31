@@ -1,5 +1,6 @@
 #include "bsp_rc522.h"
 #include "bsp_spi.h"
+#include "bsp_usart.h"
 #include "board_config.h"
 #include "delay.h"
 
@@ -137,8 +138,8 @@ void bsp_rc522_init(void) {
     /* CRC 初值 0x6363 */
     rc522_write_reg(RC522_REG_MODE, 0x3DU);
 
-    /* 接收增益 48dB（0x07 << 4），读卡距离更远 */
-    rc522_write_reg(RC522_REG_RF_CFG, 0x70U);
+    /* 接收增益先降到 33dB（0x04 << 4），有些模块高增益不稳 */
+    rc522_write_reg(RC522_REG_RF_CFG, 0x40U);
 
     /* 106 kbit/s 速率 */
     rc522_write_reg(RC522_REG_TX_MODE, 0x00U);
@@ -317,14 +318,23 @@ uint8_t bsp_rc522_read_uid(uint32_t *uid) {
     uint32_t id = 0U;
 
     if (!rc522_request()) {          /* 没有卡靠近，直接返回，不浪费时间 */
+        bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] No card (request failed)\r\n");
         return 0U;
     }
+    bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Card detected (REQA OK)\r\n");
+
     if (!rc522_anticoll(&id)) {
+        bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Anticoll failed\r\n");
         return 0U;
     }
+    bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Anticoll OK\r\n");
+
     if (!rc522_select(id)) {
+        bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Select failed\r\n");
         return 0U;
     }
+    bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Select OK\r\n");
+
     rc522_halt();                    /* 读到了才挂起 */
 
     if (uid != 0) {
