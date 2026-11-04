@@ -41,10 +41,12 @@ extern volatile uint32_t g_sys_tick_ms;
 #define RC522_NSS_PORT        GPIOA
 #define RC522_NSS_PIN         GPIO_Pin_4
 #define RC522_RST_PORT        GPIOB
-#define RC522_RST_PIN         GPIO_Pin_0
+#define RC522_RST_PIN         GPIO_Pin_8
 
-/* 72 MHz / 64 = 1.125 MHz，RC522 上限 10 MHz，留足余量 */
-#define RC522_SPI_PRESCALER   SPI_BaudRatePrescaler_64
+/* 72 MHz / 256 = 281 kHz。官方 RC522 例程用软件模拟 SPI，每位间隔
+ * 高达 200us（约 1.6kHz），说明这颗芯片对 SPI 时序很敏感。
+ * 硬件 SPI 最低只能到 281kHz；若仍不稳，需改用软件模拟 SPI。 */
+#define RC522_SPI_PRESCALER   SPI_BaudRatePrescaler_256
 
 /* ---------- 软件模拟 I2C：DS3231 / AT24C02 / SSD1306 ---------- */
 /* 三个器件挂在同一组 SCL/SDA 上，靠器件地址区分，互不冲突。
@@ -78,7 +80,7 @@ extern volatile uint32_t g_sys_tick_ms;
 
 /* ---------- 蜂鸣器与 LED ---------- */
 #define BEEP_PORT             GPIOB
-#define BEEP_PIN              GPIO_Pin_8
+#define BEEP_PIN              GPIO_Pin_9
 
 /* 蜂鸣器触发极性：
  *   0 = 低电平鸣叫 —— 江协那套 3 脚有源蜂鸣器模块（板上自带三极管），
@@ -88,7 +90,7 @@ extern volatile uint32_t g_sys_tick_ms;
 #define BEEP_ON_LEVEL         0
 
 #define LED_GREEN_PORT        GPIOB
-#define LED_GREEN_PIN         GPIO_Pin_9
+#define LED_GREEN_PIN         GPIO_Pin_5
 
 #define LED_RED_PORT          GPIOC
 #define LED_RED_PIN           GPIO_Pin_13

@@ -80,7 +80,8 @@ static void rc522_test(void) {
     /* 第一次进来先自检 SPI 通路 */
     if (!s_checked) {
         uint8_t ver = drv_rfid_version();
-        s_rc522_ok = (ver == 0x91U || ver == 0x92U) ? 1U : 0U;
+        /* 0x91/0x92 = 原装 NXP MFRC522；0x82 = 复旦微 FM17522（寄存器兼容） */
+        s_rc522_ok = (ver == 0x91U || ver == 0x92U || ver == 0x82U) ? 1U : 0U;
         s_checked  = 1U;
 
         if (s_rc522_ok) {

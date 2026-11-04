@@ -22,6 +22,10 @@
 /* ---------- 用到的寄存器 ---------- */
 #define RC522_REG_COMMAND        0x01U
 #define RC522_REG_COM_IRQ        0x04U
+#define RC522_REG_COM_I_EN       0x02U
+#define RC522_REG_DIV_IRQ        0x05U
+#define RC522_REG_CRC_RESULT_M   0x21U
+#define RC522_REG_CRC_RESULT_L   0x22U
 #define RC522_REG_ERROR          0x06U
 #define RC522_REG_FIFO_DATA      0x09U
 #define RC522_REG_FIFO_LEVEL     0x0AU
@@ -34,6 +38,8 @@
 #define RC522_REG_TX_CONTROL     0x14U
 #define RC522_REG_TX_ASK         0x15U
 #define RC522_REG_RF_CFG         0x26U
+#define RC522_REG_STATUS2        0x08U
+#define RC522_REG_RX_SEL         0x17U
 #define RC522_REG_T_MODE         0x2AU
 #define RC522_REG_T_PRESCALER    0x2BU
 #define RC522_REG_T_RELOAD_H     0x2CU
@@ -42,11 +48,13 @@
 
 /* ---------- 命令 ---------- */
 #define RC522_CMD_IDLE           0x00U
+#define RC522_CMD_CALC_CRC       0x03U
 #define RC522_CMD_TRANSCEIVE     0x0CU
 #define RC522_CMD_SOFT_RESET     0x0FU
 
 /* ---------- PICC 指令（发给卡片的命令） ---------- */
 #define PICC_REQA                0x26U
+#define PICC_WUPA                0x52U   /* 唤醒：Idle 和 Halt 状态都能响应 */
 #define PICC_HALT                0x50U
 #define PICC_ANTICOLL_CL1        0x93U
 #define PICC_ANTICOLL_CL1_NVB    0x20U
@@ -60,7 +68,10 @@
 
 /* 收发一次最多轮询这么多次寄存器；按 SPI 速度估算约 20ms 量级，
  * 超时就当「无卡」处理，绝不能让主循环卡死在这里。 */
-#define RC522_POLL_LIMIT         8000U
+/* 收发一次最多轮询这么多次寄存器。
+ * 200us 软件 SPI 下一次读寄存器约 4.8ms，100 次约 480ms，
+ * 远大于芯片 15ms 的硬件超时，既够等又不会让主循环停太久。 */
+#define RC522_POLL_LIMIT         100U
 
 /* ---------------------------- 寄存器读写 ---------------------------- */
 
@@ -106,8 +117,9 @@ void bsp_rc522_antenna(uint8_t on) {
 
 void bsp_rc522_init(void) {
     GPIO_InitTypeDef gpio;
+    uint16_t wait;
 
-    /* RST 引脚：推挽输出，低电平复位 */
+    /* RST 引脚：推挽输出 */
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
     gpio.GPIO_Pin   = RC522_RST_PIN;
     gpio.GPIO_Mode  = GPIO_Mode_Out_PP;
@@ -116,37 +128,49 @@ void bsp_rc522_init(void) {
 
     bsp_spi_cs(1);
 
-    /* 硬复位：拉低 RST 再放开 */
-    GPIO_ResetBits(RC522_RST_PORT, RC522_RST_PIN);
-    delay_ms(10U);
+    /* ================= 官方 PcdReset() ================= */
+
+    /* 硬件复位脉冲：高-低-高，每段 1us（官方原样） */
     GPIO_SetBits(RC522_RST_PORT, RC522_RST_PIN);
-    delay_ms(50U);
+    delay_us(1U);
+    GPIO_ResetBits(RC522_RST_PORT, RC522_RST_PIN);
+    delay_us(1U);
+    GPIO_SetBits(RC522_RST_PORT, RC522_RST_PIN);
+    delay_us(1U);
 
     /* 软复位 */
     rc522_write_reg(RC522_REG_COMMAND, RC522_CMD_SOFT_RESET);
-    delay_ms(50U);
 
-    /* 定时器：TAuto=1，收发结束自动启动定时器；30 个节拍约 10ms 超时 */
+    /* 等软复位完成：CommandReg 的 bit4 清零（官方 while，加超时保护） */
+    wait = 2000U;
+    while (((rc522_read_reg(RC522_REG_COMMAND) & 0x10U) != 0U) && (--wait != 0U)) {
+    }
+    delay_us(1U);
+
+    /* 官方 PcdReset 的寄存器序列 */
+    rc522_write_reg(RC522_REG_MODE,        0x3DU);
+    rc522_write_reg(RC522_REG_T_RELOAD_L,  30U);
+    rc522_write_reg(RC522_REG_T_RELOAD_H,  0U);
     rc522_write_reg(RC522_REG_T_MODE,      0x8DU);
     rc522_write_reg(RC522_REG_T_PRESCALER, 0x3EU);
-    rc522_write_reg(RC522_REG_T_RELOAD_H,  0x00U);
-    rc522_write_reg(RC522_REG_T_RELOAD_L,  0x1EU);
+    rc522_write_reg(RC522_REG_TX_ASK,      0x40U);
 
-    /* 100% ASK 调制，MIFARE 卡要求 */
-    rc522_write_reg(RC522_REG_TX_ASK, 0x40U);
+    /* ============ 官方 M500PcdConfigISOType('A') ============ */
+    rc522_clear_bits(RC522_REG_STATUS2, 0x08U);
+    rc522_write_reg(RC522_REG_MODE,        0x3DU);
+    rc522_write_reg(RC522_REG_RX_SEL,      0x86U);
+    rc522_write_reg(RC522_REG_RF_CFG,      0x7FU);
+    rc522_write_reg(RC522_REG_T_RELOAD_L,  30U);
+    rc522_write_reg(RC522_REG_T_RELOAD_H,  0U);
+    rc522_write_reg(RC522_REG_T_MODE,      0x8DU);
+    rc522_write_reg(RC522_REG_T_PRESCALER, 0x3EU);
 
-    /* CRC 初值 0x6363 */
-    rc522_write_reg(RC522_REG_MODE, 0x3DU);
+    delay_us(2U);
 
-    /* 接收增益先降到 33dB（0x04 << 4），有些模块高增益不稳 */
-    rc522_write_reg(RC522_REG_RF_CFG, 0x40U);
-
-    /* 106 kbit/s 速率 */
-    rc522_write_reg(RC522_REG_TX_MODE, 0x00U);
-    rc522_write_reg(RC522_REG_RX_MODE, 0x00U);
-
-    /* 打开天线 */
-    rc522_write_reg(RC522_REG_TX_CONTROL, 0x03U);
+    /* 官方 PcdAntennaOn()：读-改-写打开 TX1/TX2 */
+    if ((rc522_read_reg(RC522_REG_TX_CONTROL) & 0x03U) != 0x03U) {
+        rc522_set_bits(RC522_REG_TX_CONTROL, 0x03U);
+    }
 }
 
 uint8_t bsp_rc522_version(void) {
@@ -169,10 +193,13 @@ static uint8_t rc522_transceive(const uint8_t *send, uint8_t send_len,
     uint8_t  error;
     uint8_t  fifo_level;
 
-    /* 1. 让芯片回到空闲，清中断标志、清空 FIFO */
+    /* 1. 完全按官方 PcdComMF522 的寄存器顺序：
+     *      ComIEnReg = irqEn|0x80  →  ClearBitMask(ComIrqReg,0x80)
+     *      →  CommandReg = Idle    →  SetBitMask(FIFOLevelReg,0x80) */
+    rc522_write_reg(RC522_REG_COM_I_EN, 0xF7U);       /* 0x77 | 0x80 */
+    rc522_clear_bits(RC522_REG_COM_IRQ, 0x80U);
     rc522_write_reg(RC522_REG_COMMAND, RC522_CMD_IDLE);
-    rc522_write_reg(RC522_REG_COM_IRQ, 0x7FU);
-    rc522_write_reg(RC522_REG_FIFO_LEVEL, 0x80U);
+    rc522_set_bits(RC522_REG_FIFO_LEVEL, 0x80U);      /* FlushBuffer */
 
     /* 2. 把要发的数据塞进 FIFO */
     for (i = 0U; i < send_len; i++) {
@@ -184,7 +211,8 @@ static uint8_t rc522_transceive(const uint8_t *send, uint8_t send_len,
     rc522_write_reg(RC522_REG_BIT_FRAMING,
                     (uint8_t)((tx_last_bits & 0x07U) | 0x80U));
 
-    /* 4. 等中断：收到数据(RxIRq) / 传输完成(IdleIRq) / 超时(TimerIRq) */
+    /* 4. 等中断：TxIRq/IdleIRq 表示有结果，TimerIRq 表示超时
+     *    （与官方 PcdComMF522 的等待条件完全一致：等 0x30、或 0x01） */
     poll = 0U;
     do {
         irq = rc522_read_reg(RC522_REG_COM_IRQ);
@@ -193,9 +221,16 @@ static uint8_t rc522_transceive(const uint8_t *send, uint8_t send_len,
              ((irq & RC522_IRQ_TIMER) == 0U) &&
              (poll < RC522_POLL_LIMIT));
 
-    rc522_write_reg(RC522_REG_BIT_FRAMING, 0x00U);
+    /* 5. 收尾——官方 PcdComMF522 在判断结果之前就要做这三步：
+     *      ClearBitMask(BitFramingReg, 0x80)  清 StartSend
+     *      SetBitMask(ControlReg, 0x80)       停止定时器  ★ 之前漏了
+     *      WriteRawRC(CommandReg, PCD_IDLE)   命令回空闲  ★ 之前漏了
+     *    不停定时器的话它会一直跑，把下一次收发的状态搞乱。 */
+    rc522_clear_bits(RC522_REG_BIT_FRAMING, 0x80U);
+    rc522_set_bits(RC522_REG_CONTROL, 0x80U);
+    rc522_write_reg(RC522_REG_COMMAND, RC522_CMD_IDLE);
 
-    /* 超时，或者根本没有收到数据 */
+    /* 6. 判定结果 */
     if (poll >= RC522_POLL_LIMIT) {
         return 0U;
     }
@@ -203,13 +238,13 @@ static uint8_t rc522_transceive(const uint8_t *send, uint8_t send_len,
         return 0U;
     }
 
-    /* 5. 检查错误位：BufferOvfl / ParityErr / ProtocolErr 任一置位都算失败 */
+    /* 7. 检查错误位，掩码与官方一致（BufferOvfl/CollErr/CRCErr/ProtocolErr） */
     error = rc522_read_reg(RC522_REG_ERROR);
-    if ((error & 0x13U) != 0U) {
+    if ((error & 0x1BU) != 0U) {
         return 0U;
     }
 
-    /* 6. 取回接收到的数据 */
+    /* 8. 取回接收到的数据 */
     fifo_level = rc522_read_reg(RC522_REG_FIFO_LEVEL);
 
     if (back != 0) {
@@ -235,13 +270,18 @@ static uint8_t rc522_transceive(const uint8_t *send, uint8_t send_len,
 
 /* 第 1 步：寻卡。附近有卡时卡片会回应 2 字节 ATQA。 */
 static uint8_t rc522_request(void) {
-    uint8_t  cmd = PICC_REQA;
+    /* 官方 PcdRequest 用 PICC_REQALL(0x52/WUPA)：对 Idle 和 Halt 状态的卡
+     * 都能唤醒；而 REQA(0x26) 叫不醒已经挂起的卡。 */
+    uint8_t  cmd = PICC_WUPA;
     uint8_t  back[2];
     uint16_t back_len = (uint16_t)sizeof(back);
 
-    rc522_clear_bits(RC522_REG_COLL, 0x80U);        /* 清除「冲突已解决」标志 */
+    /* 官方 PcdRequest 寻卡前的三步准备（我们之前只在初始化做过一次，
+     * 而官方的做法是**每次寻卡前都重做**）： */
+    rc522_clear_bits(RC522_REG_STATUS2, 0x08U);      /* 清 Crypto1 单元 */
+    rc522_write_reg(RC522_REG_BIT_FRAMING, 0x07U);   /* TxLastBits = 7 */
+    rc522_set_bits(RC522_REG_TX_CONTROL, 0x03U);     /* 确保 TX1/TX2 天线开着 */
 
-    /* 只发 7 位，因为 REQA 是短帧 */
     if (!rc522_transceive(&cmd, 1U, back, &back_len, 7U)) {
         return 0U;
     }
@@ -281,8 +321,35 @@ static uint8_t rc522_anticoll(uint32_t *uid) {
 }
 
 /* 第 3 步：选中卡片。卡回 SAK，表示已经进入「已选中」状态。 */
+/* 用芯片内部硬件单元计算 CRC16。
+ * Select 命令必须附带 CRC，否则卡片不认这条命令、不会回 SAK。
+ * 与官方 CalulateCRC 完全一致：写数据 → 下 CALCCRC 命令 → 等 CRCIRq
+ * → 从 CRCResultRegL/M 读回 2 字节。 */
+static void rc522_calc_crc(const uint8_t *data, uint8_t len, uint8_t *out) {
+    uint8_t  i;
+    uint16_t wait;
+
+    rc522_clear_bits(RC522_REG_DIV_IRQ, 0x04U);       /* 清 CRCIRq */
+    rc522_write_reg(RC522_REG_COMMAND, RC522_CMD_IDLE);
+    rc522_set_bits(RC522_REG_FIFO_LEVEL, 0x80U);      /* FlushBuffer */
+
+    for (i = 0U; i < len; i++) {
+        rc522_write_reg(RC522_REG_FIFO_DATA, data[i]);
+    }
+
+    rc522_write_reg(RC522_REG_COMMAND, RC522_CMD_CALC_CRC);
+
+    wait = 2000U;
+    while (((rc522_read_reg(RC522_REG_DIV_IRQ) & 0x04U) == 0U) && (--wait != 0U)) {
+    }
+
+    out[0] = rc522_read_reg(RC522_REG_CRC_RESULT_L);
+    out[1] = rc522_read_reg(RC522_REG_CRC_RESULT_M);
+}
+
+/* 第 3 步：选中卡片。卡回 SAK，表示已经进入「已选中」状态。 */
 static uint8_t rc522_select(uint32_t uid) {
-    uint8_t  send[7];
+    uint8_t  send[9];                 /* 7 字节命令 + 2 字节 CRC */
     uint8_t  back[3];
     uint16_t back_len = (uint16_t)sizeof(back);
 
@@ -292,10 +359,14 @@ static uint8_t rc522_select(uint32_t uid) {
     send[3] = (uint8_t)(uid >> 16);
     send[4] = (uint8_t)(uid >> 8);
     send[5] = (uint8_t)(uid);
-    send[6] = (uint8_t)(send[2] ^ send[3] ^ send[4] ^ send[5]);
+    send[6] = (uint8_t)(send[2] ^ send[3] ^ send[4] ^ send[5]);   /* BCC */
 
-    /* 7 个字节：0x93 + 0x70 + 4 字节 UID + BCC（BCC 是 UID 四字节的异或） */
-    if (!rc522_transceive(send, 7U, back, &back_len, 0U)) {
+    /* 关键：Select 必须带 CRC16，用芯片硬件单元算出来追加在后面 */
+    rc522_calc_crc(send, 7U, &send[7]);
+
+    rc522_clear_bits(RC522_REG_STATUS2, 0x08U);
+
+    if (!rc522_transceive(send, 9U, back, &back_len, 0U)) {
         return 0U;
     }
     return (back_len >= 1U) ? 1U : 0U;
@@ -318,22 +389,14 @@ uint8_t bsp_rc522_read_uid(uint32_t *uid) {
     uint32_t id = 0U;
 
     if (!rc522_request()) {          /* 没有卡靠近，直接返回，不浪费时间 */
-        bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] No card (request failed)\r\n");
         return 0U;
     }
-    bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Card detected (REQA OK)\r\n");
-
     if (!rc522_anticoll(&id)) {
-        bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Anticoll failed\r\n");
         return 0U;
     }
-    bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Anticoll OK\r\n");
-
     if (!rc522_select(id)) {
-        bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Select failed\r\n");
         return 0U;
     }
-    bsp_usart_send_str(USART_PORT_DEBUG, "[RC522] Select OK\r\n");
 
     rc522_halt();                    /* 读到了才挂起 */
 
