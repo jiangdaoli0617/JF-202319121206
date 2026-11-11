@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* 容量由 AT24C02 的 2KB 预算决定，见 docs/07-EEPROM存储设计.md。
+/* 容量按 AT24C256（32 KB）规划，见 docs/07-EEPROM存储设计.md。
  * 新增持久化字段前必须先核算预算，不能原地追加。 */
 #define STORAGE_MAX_USERS   40
 #define STORAGE_MAX_EQUIP   22
