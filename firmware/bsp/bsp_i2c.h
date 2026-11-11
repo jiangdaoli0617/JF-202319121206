@@ -15,6 +15,14 @@ uint8_t bsp_i2c_write_reg(uint8_t addr, uint8_t reg,
 uint8_t bsp_i2c_read_reg(uint8_t addr, uint8_t reg,
                          uint8_t *data, uint16_t len);
 
+/* 片内地址为 2 字节的器件（如 AT24C256），高字节在前。
+ * DS3231 / OLED 是 1 字节地址，用上面两个函数；
+ * AT24C256 的地址范围 0x0000~0x7FFF，用下面两个。 */
+uint8_t bsp_i2c_write_mem16(uint8_t addr, uint16_t mem,
+                            const uint8_t *data, uint16_t len);
+uint8_t bsp_i2c_read_mem16(uint8_t addr, uint16_t mem,
+                           uint8_t *data, uint16_t len);
+
 /* 扫描 0x01~0x7F，把在线地址写入 found，返回发现数量 */
 uint8_t bsp_i2c_scan(uint8_t *found, uint8_t max);
 

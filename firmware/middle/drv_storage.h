@@ -53,6 +53,15 @@ typedef struct {
 
 void     drv_storage_init(void);
 
+/* 存储器件自检：向尾部备份区写入一组测试数据再读回比对。
+ * 返回 1 通过、0 失败（器件不在线或读写不一致）。
+ * 用于模块 4 上机验证，不占用正式数据区。 */
+uint8_t  drv_storage_selftest(void);
+
+/* 上电次数计数器：每次上电读出旧值 +1 再写回，返回新的次数。
+ * 断电重启后数字继续累加，即可证明 EEPROM 的掉电保持功能正常。 */
+uint16_t drv_storage_boot_count(void);
+
 /* 以下 load 自动选用 A/B 中校验通过且 seq 较大的一份 */
 uint8_t  drv_storage_load_config(sys_config_t *cfg);
 uint16_t drv_storage_load_users(user_card_t *out, uint16_t max);

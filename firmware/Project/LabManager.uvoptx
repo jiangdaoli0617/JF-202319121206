@@ -331,8 +331,8 @@
       <tvExp>0</tvExp>
       <tvExpOptDlg>0</tvExpOptDlg>
       <bDave2>0</bDave2>
-      <PathWithFileName>..\bsp\bsp_at24c02.c</PathWithFileName>
-      <FilenameWithoutPath>bsp_at24c02.c</FilenameWithoutPath>
+      <PathWithFileName>..\bsp\bsp_at24c256.c</PathWithFileName>
+      <FilenameWithoutPath>bsp_at24c256.c</FilenameWithoutPath>
       <RteFlg>0</RteFlg>
       <bShared>0</bShared>
     </File>

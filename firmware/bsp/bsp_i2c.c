@@ -245,6 +245,57 @@ uint8_t bsp_i2c_read_reg(uint8_t addr, uint8_t reg,
     return 1U;
 }
 
+/* 写「2 字节片内地址」器件：START → 器件地址(写) → 地址高 → 地址低 → 数据 → STOP */
+uint8_t bsp_i2c_write_mem16(uint8_t addr, uint16_t mem,
+                            const uint8_t *data, uint16_t len) {
+    uint16_t i;
+
+    i2c_start();
+    if (!i2c_write_byte((uint8_t)(addr << 1)) ||
+        !i2c_write_byte((uint8_t)(mem >> 8)) ||
+        !i2c_write_byte((uint8_t)(mem & 0xFFU))) {
+        i2c_stop();
+        return 0U;
+    }
+    for (i = 0U; i < len; i++) {
+        if (!i2c_write_byte(data[i])) {
+            i2c_stop();
+            return 0U;
+        }
+    }
+    i2c_stop();
+    return 1U;
+}
+
+/* 读「2 字节片内地址」器件：先写地址，再用重复起始位切到读方向 */
+uint8_t bsp_i2c_read_mem16(uint8_t addr, uint16_t mem,
+                           uint8_t *data, uint16_t len) {
+    uint16_t i;
+
+    if (len == 0U) {
+        return 0U;
+    }
+
+    i2c_start();
+    if (!i2c_write_byte((uint8_t)(addr << 1)) ||
+        !i2c_write_byte((uint8_t)(mem >> 8)) ||
+        !i2c_write_byte((uint8_t)(mem & 0xFFU))) {
+        i2c_stop();
+        return 0U;
+    }
+
+    i2c_start();
+    if (!i2c_write_byte((uint8_t)((addr << 1) | 0x01U))) {
+        i2c_stop();
+        return 0U;
+    }
+    for (i = 0U; i < len; i++) {
+        data[i] = i2c_read_byte((i == (uint16_t)(len - 1U)) ? 0U : 1U);
+    }
+    i2c_stop();
+    return 1U;
+}
+
 uint8_t bsp_i2c_scan(uint8_t *found, uint8_t max) {
     uint8_t addr;
     uint8_t count = 0U;

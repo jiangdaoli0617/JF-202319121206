@@ -6,7 +6,7 @@
 ## 项目
 
 本科毕业设计：**基于 STM32F103C8T6 标准库（StdPeriph）的实验室物品出入管理系统**。
-现场端用 RFID 识别物品、按键借还、OLED 显示、声光提示、AT24C02 断电保存、DS3231 打时间戳、ESP-01S 经 WiFi 上传给 Java 上位机。
+现场端用 RFID 识别物品、按键借还、OLED 显示、声光提示、AT24C256 断电保存、DS3231 打时间戳、ESP-01S 经 WiFi 上传给 Java 上位机。
 
 **禁止使用 HAL 库**，全程标准库。
 
@@ -14,7 +14,7 @@
 
 ```
 RC522 (软件SPI)  CS=PA4  SCK=PA5  MISO=PA6  MOSI=PA7   RST=PB8
-软件 I2C 共用    SCL=PB6  SDA=PB7    OLED 0x3C / AT24C02 0x50 / DS3231 0x68（7 位地址）
+软件 I2C 共用    SCL=PB6  SDA=PB7    OLED 0x3C / AT24C256 0x50 / DS3231 0x68（7 位地址）
 按键 ×5         登记=PB11  借出=PB12  归还=PB13  上一条=PB14  下一条=PB15（上拉，按下接地）
 蜂鸣器          PB9（S8050 驱动，高电平响）
 ESP-01S         USART1  PA9(TX)/PA10(RX)
@@ -38,7 +38,7 @@ ESP-01S         USART1  PA9(TX)/PA10(RX)
 开题报告.md          ← 接口方案的权威来源
 firmware/            ← 唯一的固件工程（Keil 工程在 firmware/Project/）
   Core/                启动、时钟、中断、延时、board_config.h
-  bsp/                 硬件驱动：GPIO / I2C / SPI / USART / OLED / AT24C02 / DS3231 / RC522 / ESP
+  bsp/                 硬件驱动：GPIO / I2C / SPI / USART / OLED / AT24C256 / DS3231 / RC522 / ESP
   middle/              设备抽象层 drv_*：显示、按键、声光、RFID、RTC、存储、网络
   protocol/            报文打包与 CRC
   app/                 业务层：状态机、权限、台账、日志、界面
@@ -86,16 +86,16 @@ docs/                ← 设计文档（需求、架构、硬件、模块、规�
 
 写清楚「改了什么、为什么」。另一台电脑上的人只能靠提交信息和 `docs/` 理解这边的思路。
 
-## 当前进度（2026-10-28）
+## 当前进度（2026-11-11）
 
-- 已完成：工程骨架 + Keil 工程（Keil 5.24a + DFP 2.2.0，ST-Link）；模块 1 延时与 GPIO；模块 2 OLED 驱动（`bsp_oled.c` / `bsp_oled_font.h`）；模块 3 按键 + 蜂鸣器（K1~K5 全部验证通过）；模块 5 DS3231 实时时钟（实物验证通过）；**模块 6 RC522 读卡（实物验证通过，UID 读取正常）**
-- **用户电脑已在实物上验证**：USART2 启动打印 `[BOOT] LabManager` + OLED 显示 `Lab Manager` / `Swipe / Press` + 5 个按键（K1~K5）触发键名和短鸣 + DS3231 走时/设置/断电保持 + RC522 刷卡读 UID（`03FA843E` 实测）
+- 已完成：工程骨架 + Keil 工程（Keil 5.24a + DFP 2.2.0，ST-Link）；模块 1 延时与 GPIO；模块 2 OLED 驱动（`bsp_oled.c` / `bsp_oled_font.h`）；模块 3 按键 + 蜂鸣器（K1~K5 全部验证通过）；模块 5 DS3231 实时时钟（实物验证通过）；**模块 6 RC522 读卡（实物验证通过，UID 读取正常）**；**模块 4 AT24C256 断电存储（实物验证通过，读写自检 OK、上电计数断电累加正常）**
+- **用户电脑已在实物上验证**：USART2 启动打印 `[BOOT] LabManager` + OLED 显示 `Lab Manager` + 5 个按键（K1~K5）触发键名和短鸣 + DS3231 走时/设置/断电保持 + RC522 刷卡读 UID（`03FA843E` 实测）+ AT24C256 读写与掉电保持（Boot 计数递增）
 - 汉字 16×16 字库目前是占位模板，需用 PCtoLCD2002 取模后填入
-- **存储器件更换**：AT24C02（256B）容量不足，装不下 40 卡/22 器材/36 日志
-  （单份约 1.4KB，含 A/B 双备份约 2.8KB），改用 **AT24C256**（32KB，地址仍 0x50，
-  接线不变）。驱动需改 2 字节地址 + 64B 页，等器件到货后做。
-- 下一步：**模块 7 ESP-01S**（等 USB 供电线到货）、**模块 4 AT24C256**（等器件到货）
-- 尚未接硬件验证：ESP-01S、AT24C256
+- **存储器件已更换为 AT24C256**（32KB，地址仍 0x50，接线不变）。驱动已实现 2 字节片内地址
+  + 64B 分页写入（`bsp_at24c256.c`）。当前只做了**自检**（写测试数据读回比对 + 上电计数），
+  `drv_storage` 的正式分区、A/B 双备份、日志环形队列**尚未实现**
+- 下一步：**drv_storage 存储层实现**（分区 + A/B 备份 + 日志环），之后 **模块 7 ESP-01S**
+- 尚未接硬件验证：ESP-01S
 - 用户电脑环境：Keil 5.24a 在 `G:\Keil_v5`，DFP 2.2.0 已装，ST-Link 驱动已装
 - 工位端已装 Keil 5.24a（`D:\Keil_v5`，ARMCC 5.06u5 + DFP 2.2.0），`firmware/Libraries/` 已就位；
   但本机有**深信服 EDR 的文件透明加密（EAIO）**，`armcc.exe` 不在白名单，读源码拿到的是

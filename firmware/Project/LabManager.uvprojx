@@ -441,9 +441,9 @@
               <FilePath>..\bsp\bsp_ds3231.c</FilePath>
             </File>
             <File>
-              <FileName>bsp_at24c02.c</FileName>
+              <FileName>bsp_at24c256.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\bsp\bsp_at24c02.c</FilePath>
+              <FilePath>..\bsp\bsp_at24c256.c</FilePath>
             </File>
             <File>
               <FileName>bsp_oled.c</FileName>

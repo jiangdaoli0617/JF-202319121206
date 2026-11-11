@@ -64,7 +64,7 @@ extern volatile uint32_t g_sys_tick_ms;
 /* 器件地址用 7 位形式，底层发送时左移一位再补读写位；
  * 括号内是开题报告中写法的 8 位写地址，两者是同一器件。 */
 #define DS3231_ADDR           0x68      /* 8 位写地址 0xD0 */
-#define AT24C02_ADDR          0x50      /* 8 位写地址 0xA0 */
+#define AT24C256_ADDR         0x50      /* 8 位写地址 0xA0 */
 #define OLED_ADDR             0x3C      /* 8 位写地址 0x78 */
 
 /* ---------- 按键 K1~K5 ---------- */
